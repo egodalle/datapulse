@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: amazon_raw
+    description: "Raw data from Amazon Seller Central"
+    schema: raw
+    tables:
+      - name: amazon_orders
+        description: "Amazon orders data"
+            
+      - name: amazon_order_items
+        description: "Amazon order items"
+
+      - name: amazon_catalog_items
+        description: "Amazon catalog items"

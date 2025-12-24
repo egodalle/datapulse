@@ -1,0 +1,53 @@
+version: 2
+
+models:
+  - name: stg_shopify__orders
+    description: "Cleaned and standardized Shopify orders"
+    columns:
+      - name: order_id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+      - name: platform
+        description: "Source platform (always 'shopify')"
+      - name: total_amount
+        description: "Total order amount"
+      - name: payment_status
+        description: "Payment status"
+
+  - name: stg_shopify__products
+    description: "Cleaned and standardized Shopify products"
+    columns:
+      - name: product_id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+      - name: product_name
+        description: "Product title"
+
+  - name: stg_shopify__customers
+    description: "Cleaned and standardized Shopify customers"
+    columns:
+      - name: customer_id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+      - name: customer_email
+        description: "Customer email address"
+
+  - name: stg_shopify__order_items
+    description: "Cleaned and standardized Shopify order line items"
+    columns:
+      - name: line_item_id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+      - name: order_id
+        description: "Foreign key to orders"
+        tests:
+          - not_null
+

@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: int_unified_orders
+    description: "Unified orders from all e-commerce platforms (Shopify, Amazon, Lazada, Shopee)"
+    columns:
+      - name: order_id
+        description: "Unique order identifier"
+        tests:
+          - not_null
+      - name: platform
+        description: "Source platform"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['shopify', 'amazon', 'lazada', 'shopee']
+      - name: total_amount_usd
+        description: "Total order amount converted to USD"
+      - name: is_paid
+        description: "Whether the order has been paid"
+      - name: is_fulfilled
+        description: "Whether the order has been fulfilled"
+
+  - name: int_unified_order_items
+    description: "Unified order line items from all platforms"
+    columns:
+      - name: line_item_id
+        description: "Unique line item identifier"
+        tests:
+          - not_null
+      - name: order_id
+        description: "Parent order ID"
+        tests:
+          - not_null
+      - name: platform
+        description: "Source platform"
+        tests:
+          - not_null
+

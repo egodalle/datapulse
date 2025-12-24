@@ -1,0 +1,53 @@
+name: 'datapulse_dbt'
+version: '1.0.0'
+config-version: 2
+
+profile: 'datapulse_dbt'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+vars:
+  # Date range for analysis
+  start_date: '2024-01-01'
+  # Currency conversion rates (base: USD)
+  currency_rates:
+    PHP: 0.018
+    MYR: 0.21
+    SGD: 0.74
+    IDR: 0.000063
+
+models:
+  datapulse_dbt:
+    staging:
+      +materialized: view
+      +schema: staging
+      shopify:
+        +tags: ['shopify', 'staging']
+      amazon:
+        +tags: ['amazon', 'staging']
+      lazada:
+        +tags: ['lazada', 'staging']
+      shopee:
+        +tags: ['shopee', 'staging']
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+      +tags: ['intermediate']
+    marts:
+      +materialized: table
+      +schema: marts
+      kpis:
+        +tags: ['kpis', 'marts']
+
+seeds:
+  datapulse_dbt:
+    +schema: staging

@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+  - name: shopify_raw
+    description: "Raw data from Shopify"
+    schema: raw
+    tables:
+      - name: shopify_orders
+        description: "Shopify orders data"
+            
+      - name: shopify_products
+        description: "Shopify products data"
+            
+      - name: shopify_customers
+        description: "Shopify customers data"
+
+      - name: shopify_order_line_items
+        description: "Shopify order line items"

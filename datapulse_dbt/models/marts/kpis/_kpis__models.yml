@@ -1,0 +1,51 @@
+version: 2
+
+models:
+  - name: kpi_revenue_summary
+    description: "Daily revenue metrics by platform"
+    columns:
+      - name: order_date
+        description: "Date of orders"
+        tests:
+          - not_null
+      - name: platform
+        description: "E-commerce platform"
+        tests:
+          - not_null
+      - name: gross_revenue_usd
+        description: "Total revenue in USD"
+
+  - name: kpi_platform_overview
+    description: "High-level KPIs per platform for dashboard overview"
+    columns:
+      - name: platform
+        description: "E-commerce platform"
+        tests:
+          - unique
+          - not_null
+      - name: total_revenue_usd
+        description: "All-time revenue in USD"
+
+  - name: kpi_product_performance
+    description: "Product-level performance metrics"
+    columns:
+      - name: product_id
+        description: "Product identifier"
+        tests:
+          - not_null
+      - name: platform
+        description: "Source platform"
+      - name: performance_tier
+        description: "Product performance classification"
+
+  - name: kpi_daily_snapshot
+    description: "Daily snapshot of all key metrics - main dashboard source"
+    columns:
+      - name: order_date
+        description: "Date"
+        tests:
+          - unique
+          - not_null
+      - name: total_revenue_usd
+        description: "Total daily revenue across all platforms"
+

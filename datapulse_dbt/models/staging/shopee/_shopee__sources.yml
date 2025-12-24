@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: shopee_raw
+    description: "Raw data from Shopee Open Platform"
+    schema: raw
+    tables:
+      - name: shopee_orders
+        description: "Shopee orders data"
+            
+      - name: shopee_order_items
+        description: "Shopee order items"
+
+      - name: shopee_products
+        description: "Shopee products"

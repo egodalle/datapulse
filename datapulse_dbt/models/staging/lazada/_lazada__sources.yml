@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: lazada_raw
+    description: "Raw data from Lazada Open Platform"
+    schema: raw
+    tables:
+      - name: lazada_orders
+        description: "Lazada orders data"
+            
+      - name: lazada_order_items
+        description: "Lazada order items"
+
+      - name: lazada_products
+        description: "Lazada products"

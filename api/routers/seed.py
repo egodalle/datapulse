@@ -137,10 +137,10 @@ async def seed_database(db: AsyncSession = Depends(get_db)):
             products.append({'id': pid, 'title': title, 'price': price, 'sku': f"SKU-{pid}"})
             
             await db.execute(text("""INSERT INTO raw.shopify_products (id, title, handle, product_type, vendor, variants, status, published_at, body_html, tags, images, created_at, updated_at)
-                VALUES (:id, :title, :handle, :type, :vendor, :variants, 'active', :pub, 'Desc', :type, :images, :created, :updated)"""),
-                {"id": pid, "title": title, "handle": title.lower().replace(' ','-'), "type": product_categories[i%5], "vendor": f"Vendor{i%10}",
+                VALUES (:id, :title, :handle, :ptype, :vendor, :variants, 'active', :pub, 'Desc', :tags, :images, :created, :updated)"""),
+                {"id": pid, "title": title, "handle": title.lower().replace(' ','-'), "ptype": product_categories[i%5], "vendor": f"Vendor{i%10}",
                  "variants": json.dumps([{'price': str(price), 'sku': f"SKU-{pid}", 'inventory_quantity': random.randint(10,500)}]),
-                 "pub": random_date(), "images": json.dumps([{'src': f"https://ex.com/{pid}.jpg"}]), "created": random_date(), "updated": datetime.now()})
+                 "pub": random_date(), "tags": product_categories[i%5], "images": json.dumps([{'src': f"https://ex.com/{pid}.jpg"}]), "created": random_date(), "updated": datetime.now()})
             await db.execute(text("INSERT INTO raw.amazon_catalog_items (asin, title, brand) VALUES (:asin, :title, :brand)"),
                 {"asin": f"ASIN{pid}", "title": title, "brand": f"Vendor{i%10}"})
             await db.execute(text("INSERT INTO raw.lazada_products (item_id, name, sku_id) VALUES (:id, :name, :sku)"),

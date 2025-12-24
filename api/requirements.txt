@@ -15,5 +15,9 @@ pydantic-settings>=2.1.0
 # HTTP client
 httpx>=0.26.0
 
+# Authentication
+PyJWT>=2.8.0
+bcrypt>=4.1.0
+
 # Utils
 python-dotenv>=1.0.0

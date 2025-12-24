@@ -10,6 +10,7 @@ import jwt
 import bcrypt
 from datetime import datetime, timedelta
 import os
+import secrets
 
 from core.database import get_db
 
@@ -40,6 +41,13 @@ class UserResponse(BaseModel):
     id: int
     email: str
     name: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
 
 # Helper Functions
 def hash_password(password: str) -> str:
@@ -74,11 +82,22 @@ async def ensure_users_table(db: AsyncSession):
             email VARCHAR(255) UNIQUE NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
             name VARCHAR(255) DEFAULT '',
+            reset_token VARCHAR(255),
+            reset_token_expires TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """))
     await db.commit()
+
+# Add reset token columns if they don't exist (for existing tables)
+async def ensure_reset_columns(db: AsyncSession):
+    try:
+        await db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255)"))
+        await db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP"))
+        await db.commit()
+    except:
+        await db.rollback()
 
 # Endpoints
 @router.post("/register", response_model=TokenResponse)
@@ -194,5 +213,95 @@ async def refresh_token(
         "access_token": token,
         "token_type": "bearer",
         "user": {"id": user[0], "email": user[1], "name": user[2] or ""}
+    }
+
+
+@router.post("/forgot-password")
+async def forgot_password(request: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Request a password reset. 
+    Returns a reset token (in production, this would be sent via email).
+    """
+    await ensure_users_table(db)
+    await ensure_reset_columns(db)
+    
+    # Check if user exists
+    result = await db.execute(
+        text("SELECT id, email FROM users WHERE email = :email"),
+        {"email": request.email}
+    )
+    user = result.fetchone()
+    
+    # Always return success to prevent email enumeration
+    if not user:
+        return {
+            "message": "If an account with that email exists, a password reset link has been sent.",
+            "success": True
+        }
+    
+    # Generate reset token
+    reset_token = secrets.token_urlsafe(32)
+    expires = datetime.utcnow() + timedelta(hours=1)  # Token valid for 1 hour
+    
+    # Save reset token to database
+    await db.execute(
+        text("""
+            UPDATE users 
+            SET reset_token = :token, reset_token_expires = :expires 
+            WHERE id = :id
+        """),
+        {"token": reset_token, "expires": expires, "id": user[0]}
+    )
+    await db.commit()
+    
+    # In production, send email here with reset link
+    # For now, return token in response (for development/testing)
+    return {
+        "message": "If an account with that email exists, a password reset link has been sent.",
+        "success": True,
+        # Include token in dev mode - remove in production!
+        "reset_token": reset_token,
+        "reset_url": f"https://datapulsestore.lovable.app/reset-password?token={reset_token}"
+    }
+
+
+@router.post("/reset-password")
+async def reset_password(request: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Reset password using the token from forgot-password"""
+    await ensure_users_table(db)
+    await ensure_reset_columns(db)
+    
+    # Find user with valid reset token
+    result = await db.execute(
+        text("""
+            SELECT id, email FROM users 
+            WHERE reset_token = :token 
+            AND reset_token_expires > :now
+        """),
+        {"token": request.token, "now": datetime.utcnow()}
+    )
+    user = result.fetchone()
+    
+    if not user:
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid or expired reset token"
+        )
+    
+    # Update password and clear reset token
+    new_hash = hash_password(request.new_password)
+    await db.execute(
+        text("""
+            UPDATE users 
+            SET password_hash = :hash, reset_token = NULL, reset_token_expires = NULL 
+            WHERE id = :id
+        """),
+        {"hash": new_hash, "id": user[0]}
+    )
+    await db.commit()
+    
+    return {
+        "message": "Password has been reset successfully",
+        "success": True
     }
 

@@ -551,7 +551,7 @@ async def get_profitability_analytics(
         UNION ALL
         SELECT 
             'amazon' as platform,
-            SUM(order_total::numeric) as gross_revenue,
+            SUM((order_total::jsonb->>'Amount')::numeric) as gross_revenue,
             0 as discounts,
             COUNT(*) as orders
         FROM raw.amazon_orders

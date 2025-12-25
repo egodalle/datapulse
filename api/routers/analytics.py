@@ -472,83 +472,14 @@ async def get_profitability_analytics(
 ):
     """Get profitability analytics - revenue breakdown, margins (partial data)"""
     
+    # By platform - simple aggregates without date filters
+    by_platform = []
+    
+    # Shopify
     try:
-        date_filter = datetime.utcnow() - timedelta(days=days)
-        
-        # Revenue breakdown from Shopify orders (most detailed)
-        revenue_sql = """
-            SELECT 
-                COALESCE(SUM(total_price), 0) as gross_revenue,
-                COALESCE(SUM(subtotal_price), 0) as subtotal,
-                COALESCE(SUM(total_tax), 0) as total_tax,
-                COALESCE(SUM(total_discounts), 0) as total_discounts,
-                COALESCE(SUM(total_price - total_discounts), 0) as net_revenue,
-                COUNT(*) as total_orders,
-                COALESCE(AVG(total_price), 0) as avg_order_value
-            FROM raw.shopify_orders
-            WHERE created_at >= :date_filter
-            AND cancelled_at IS NULL
-        """
-        
-        result = await db.execute(text(revenue_sql), {"date_filter": date_filter})
-        row = result.fetchone()
-        
-        revenue_summary = {
-            "gross_revenue": float(row[0]) if row[0] else 0,
-            "subtotal": float(row[1]) if row[1] else 0,
-            "total_tax": float(row[2]) if row[2] else 0,
-            "total_discounts": float(row[3]) if row[3] else 0,
-            "net_revenue": float(row[4]) if row[4] else 0,
-            "total_orders": row[5] or 0,
-            "avg_order_value": float(row[6]) if row[6] else 0
-        }
-        
-        # Calculate estimated metrics
-        revenue_summary["discount_rate"] = (
-            (revenue_summary["total_discounts"] / revenue_summary["gross_revenue"] * 100)
-            if revenue_summary["gross_revenue"] > 0 else 0
-        )
-        revenue_summary["tax_rate"] = (
-            (revenue_summary["total_tax"] / revenue_summary["subtotal"] * 100)
-            if revenue_summary["subtotal"] > 0 else 0
-        )
-        
-        # Daily breakdown (Shopify only for accuracy)
-        daily_sql = """
-            SELECT 
-                DATE(created_at) as order_date,
-                COALESCE(SUM(total_price), 0) as gross_revenue,
-                COALESCE(SUM(total_discounts), 0) as discounts,
-                COALESCE(SUM(total_price - total_discounts), 0) as net_revenue,
-                COUNT(*) as orders
-            FROM raw.shopify_orders
-            WHERE created_at >= :date_filter
-            AND cancelled_at IS NULL
-            GROUP BY 1
-            ORDER BY 1
-        """
-        
-        result = await db.execute(text(daily_sql), {"date_filter": date_filter})
-        daily = [
-            {
-                "date": str(row[0]),
-                "gross_revenue": float(row[1]) if row[1] else 0,
-                "discounts": float(row[2]) if row[2] else 0,
-                "net_revenue": float(row[3]) if row[3] else 0,
-                "orders": row[4]
-            }
-            for row in result.fetchall()
-        ]
-        
-        # By platform - fetch each separately for better error handling
-        by_platform = []
-        
-        # Shopify
-        shopify_sql = """
-            SELECT COALESCE(SUM(total_price), 0), COALESCE(SUM(total_discounts), 0), COUNT(*)
-            FROM raw.shopify_orders WHERE cancelled_at IS NULL
-        """
-        result = await db.execute(text(shopify_sql))
+        result = await db.execute(text(
+            "SELECT COALESCE(SUM(total_price), 0), COALESCE(SUM(total_discounts), 0), COUNT(*) FROM raw.shopify_orders WHERE cancelled_at IS NULL"
+        ))
         row = result.fetchone()
         by_platform.append({
             "platform": "shopify",
@@ -556,13 +487,14 @@ async def get_profitability_analytics(
             "discounts": float(row[1]) if row[1] else 0,
             "orders": row[2] or 0
         })
-        
-        # Amazon
-        amazon_sql = """
-            SELECT COALESCE(SUM((order_total::jsonb->>'Amount')::numeric), 0), COUNT(*)
-            FROM raw.amazon_orders
-        """
-        result = await db.execute(text(amazon_sql))
+    except:
+        by_platform.append({"platform": "shopify", "gross_revenue": 0, "discounts": 0, "orders": 0})
+    
+    # Amazon
+    try:
+        result = await db.execute(text(
+            "SELECT COALESCE(SUM((order_total::jsonb->>'Amount')::numeric), 0), COUNT(*) FROM raw.amazon_orders"
+        ))
         row = result.fetchone()
         by_platform.append({
             "platform": "amazon",
@@ -570,13 +502,14 @@ async def get_profitability_analytics(
             "discounts": 0,
             "orders": row[1] or 0
         })
-        
-        # Lazada
-        lazada_sql = """
-            SELECT COALESCE(SUM(price::numeric), 0), COALESCE(SUM(voucher::numeric), 0), COUNT(*)
-            FROM raw.lazada_orders
-        """
-        result = await db.execute(text(lazada_sql))
+    except:
+        by_platform.append({"platform": "amazon", "gross_revenue": 0, "discounts": 0, "orders": 0})
+    
+    # Lazada
+    try:
+        result = await db.execute(text(
+            "SELECT COALESCE(SUM(price::numeric), 0), COALESCE(SUM(voucher::numeric), 0), COUNT(*) FROM raw.lazada_orders"
+        ))
         row = result.fetchone()
         by_platform.append({
             "platform": "lazada",
@@ -584,13 +517,14 @@ async def get_profitability_analytics(
             "discounts": float(row[1]) if row[1] else 0,
             "orders": row[2] or 0
         })
-        
-        # Shopee
-        shopee_sql = """
-            SELECT COALESCE(SUM(total_amount::numeric), 0), COALESCE(SUM(voucher_absorbed::numeric), 0), COUNT(*)
-            FROM raw.shopee_orders
-        """
-        result = await db.execute(text(shopee_sql))
+    except:
+        by_platform.append({"platform": "lazada", "gross_revenue": 0, "discounts": 0, "orders": 0})
+    
+    # Shopee
+    try:
+        result = await db.execute(text(
+            "SELECT COALESCE(SUM(total_amount::numeric), 0), COALESCE(SUM(voucher_absorbed::numeric), 0), COUNT(*) FROM raw.shopee_orders"
+        ))
         row = result.fetchone()
         by_platform.append({
             "platform": "shopee",
@@ -598,16 +532,29 @@ async def get_profitability_analytics(
             "discounts": float(row[1]) if row[1] else 0,
             "orders": row[2] or 0
         })
-        
-        return {
-            "summary": revenue_summary,
-            "daily": daily,
-            "by_platform": by_platform,
-            "period_days": days,
-            "note": "COGS and shipping costs not available - showing revenue metrics only"
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching profitability data: {str(e)}")
+    except:
+        by_platform.append({"platform": "shopee", "gross_revenue": 0, "discounts": 0, "orders": 0})
+    
+    # Calculate totals
+    total_revenue = sum(p["gross_revenue"] for p in by_platform)
+    total_discounts = sum(p["discounts"] for p in by_platform)
+    total_orders = sum(p["orders"] for p in by_platform)
+    
+    summary = {
+        "gross_revenue": total_revenue,
+        "total_discounts": total_discounts,
+        "net_revenue": total_revenue - total_discounts,
+        "total_orders": total_orders,
+        "avg_order_value": total_revenue / total_orders if total_orders > 0 else 0,
+        "discount_rate": (total_discounts / total_revenue * 100) if total_revenue > 0 else 0
+    }
+    
+    return {
+        "summary": summary,
+        "by_platform": by_platform,
+        "period_days": days,
+        "note": "COGS and shipping costs not available - showing revenue metrics only"
+    }
 
 
 @router.get("/profitability/comparison")

@@ -551,24 +551,24 @@ async def get_profitability_analytics(
         UNION ALL
         SELECT 
             'amazon' as platform,
-            SUM(total_amount) as gross_revenue,
+            SUM(order_total::numeric) as gross_revenue,
             0 as discounts,
             COUNT(*) as orders
         FROM raw.amazon_orders
-        WHERE order_date >= :date_filter
+        WHERE purchase_date >= :date_filter
         UNION ALL
         SELECT 
             'lazada' as platform,
-            SUM(total_amount) as gross_revenue,
-            0 as discounts,
+            SUM(price::numeric) as gross_revenue,
+            SUM(COALESCE(voucher::numeric, 0)) as discounts,
             COUNT(*) as orders
         FROM raw.lazada_orders
         WHERE created_at >= :date_filter
         UNION ALL
         SELECT 
             'shopee' as platform,
-            SUM(total_amount) as gross_revenue,
-            0 as discounts,
+            SUM(total_amount::numeric) as gross_revenue,
+            SUM(COALESCE(voucher_absorbed::numeric, 0)) as discounts,
             COUNT(*) as orders
         FROM raw.shopee_orders
         WHERE create_time >= :date_filter

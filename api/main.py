@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from routers import kpis, stores, health, seed, dbt_run, auth, query
+from routers import kpis, stores, health, seed, dbt_run, auth, query, analytics
 from core.config import settings
 from core.database import engine
 
@@ -51,6 +51,7 @@ app.include_router(seed.router, prefix="/api/v1/admin", tags=["Admin"])
 app.include_router(dbt_run.router, prefix="/api/v1/admin", tags=["Admin"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(query.router, prefix="/api/v1/query", tags=["Database Query"])
+app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
 
 @app.get("/")
 async def root():
